@@ -12,6 +12,7 @@ export default defineConfig({
         devtools: resolve('src/devtools.html'),
         panel: resolve('src/panel.html'),
         background: resolve('src/background.ts'),
+        content: resolve('src/content.ts'),
       },
       output: { entryFileNames: '[name].js' },
     },
