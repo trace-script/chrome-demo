@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Mugeda Agent DevTools",
+  "name": "Trace Script",
   "version": "0.1.0",
-  "description": "Inspect H5 Agent trace events in Chrome DevTools.",
+  "description": "Inspect Agent trace events in Chrome DevTools.",
   "devtools_page": "devtools.html",
   "background": {
     "service_worker": "background.js",

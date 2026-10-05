@@ -1,4 +1,4 @@
-import type { RoleMessage } from './index.js'
+import type { RoleMessage, TraceEvent } from './index.js'
 
 export interface StoredEvent extends RoleMessage {
   readonly source?: string
@@ -24,8 +24,9 @@ function openDatabase(): Promise<IDBDatabase> {
   })
 }
 
-export async function persistEvent(data: RoleMessage): Promise<void> {
-  if (typeof indexedDB === 'undefined') return
+export async function persistEvent(data: RoleMessage | TraceEvent): Promise<void> {
+  if (typeof indexedDB === 'undefined')
+    return
 
   const database = await openDatabase()
   await new Promise<void>((resolve, reject) => {
@@ -42,7 +43,8 @@ export async function persistEvent(data: RoleMessage): Promise<void> {
 }
 
 export async function loadEvents(): Promise<StoredEvent[]> {
-  if (typeof indexedDB === 'undefined') return []
+  if (typeof indexedDB === 'undefined')
+    return []
 
   const database = await openDatabase()
   const events = await new Promise<StoredEvent[]>((resolve, reject) => {
@@ -51,8 +53,7 @@ export async function loadEvents(): Promise<StoredEvent[]> {
       .objectStore(storeName)
       .getAll()
     request.addEventListener('success', (): void =>
-      resolve(request.result as StoredEvent[]),
-    )
+      resolve(request.result as StoredEvent[]))
     request.addEventListener('error', (): void => reject(request.error))
   })
   database.close()
@@ -60,7 +61,8 @@ export async function loadEvents(): Promise<StoredEvent[]> {
 }
 
 export async function clearEvents(): Promise<void> {
-  if (typeof indexedDB === 'undefined') return
+  if (typeof indexedDB === 'undefined')
+    return
 
   const database = await openDatabase()
   await new Promise<void>((resolve, reject) => {

@@ -6,6 +6,8 @@ interface StoredEvent {
   readonly seq: number
   readonly timestamp: number
   readonly payload: unknown
+  readonly request?: unknown
+  readonly trace?: unknown
 }
 
 interface PanelState {
@@ -60,7 +62,7 @@ async function readEvents(tabId: number): Promise<StoredEvent[]> {
   })
   database.close()
   // Keep the extension compatible with Chrome versions without ES2023 toSorted.
-  // eslint-disable-next-line unicorn/no-array-sort
+
   return events.sort((left, right) => left.seq - right.seq)
 }
 
@@ -70,7 +72,8 @@ async function persistEvent(event: StoredEvent): Promise<void> {
 
 async function deleteTabEvents(tabId: number): Promise<void> {
   const events = await readEvents(tabId)
-  if (!events.length) return
+  if (!events.length)
+    return
   const database = await openDatabase()
   await new Promise<void>((resolve, reject) => {
     const transaction = database.transaction(eventStoreName, 'readwrite')
@@ -85,35 +88,43 @@ async function deleteTabEvents(tabId: number): Promise<void> {
 function createEvent(tabId: number, payload: unknown): StoredEvent {
   const seq = (nextSequences.get(tabId) ?? 0) + 1
   nextSequences.set(tabId, seq)
+  const envelope = payload && typeof payload === 'object' && 'payload' in payload
+    ? payload as { payload: unknown, request?: unknown, trace?: unknown }
+    : undefined
   return {
     id: crypto.randomUUID(),
     tabId,
     seq,
     timestamp: Date.now(),
-    payload,
+    payload: envelope?.payload ?? payload,
+    request: envelope?.request,
+    trace: envelope?.trace as StoredEvent['trace'],
   }
 }
 
 function sendToTab(tabId: number, message: unknown): void {
   for (const panel of panels) {
-    if (panel.tabId === tabId) panel.port.postMessage(message)
+    if (panel.tabId === tabId)
+      panel.port.postMessage(message)
   }
 }
 
 chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== 'devtools-panel') return
+  if (port.name !== 'devtools-panel')
+    return
   const panel: PanelState = { port }
   panels.add(panel)
   port.onMessage.addListener((message: unknown) => {
     if (
-      !message ||
-      typeof message !== 'object' ||
-      !('type' in message) ||
-      message.type !== 'devtools-panel-ready' ||
-      !('tabId' in message) ||
-      typeof message.tabId !== 'number'
-    )
+      !message
+      || typeof message !== 'object'
+      || !('type' in message)
+      || message.type !== 'devtools-panel-ready'
+      || !('tabId' in message)
+      || typeof message.tabId !== 'number'
+    ) {
       return
+    }
 
     panel.tabId = message.tabId
     readEvents(panel.tabId)
@@ -135,7 +146,8 @@ function queueEvent(tabId: number, payload: unknown): void {
         try {
           const events = await readEvents(tabId)
           nextSequences.set(tabId, events.at(-1)?.seq ?? 0)
-        } catch (error: unknown) {
+        }
+        catch (error: unknown) {
           console.error('Failed to initialize DevTools event sequence', error)
           nextSequences.set(tabId, 0)
         }
@@ -150,10 +162,25 @@ function queueEvent(tabId: number, payload: unknown): void {
   eventQueues.set(tabId, current)
 }
 
-function queueHistoryReplacement(tabId: number, payloads: unknown[]): void {
+function queueHistoryReplacement(
+  tabId: number,
+  payloads: unknown[],
+  preserveRealtime = false,
+): void {
   const previous = eventQueues.get(tabId) ?? Promise.resolve()
   const current = previous
     .then(async () => {
+      // The web app loads its local history asynchronously. A user can emit
+      // live events before that snapshot arrives; replacing the tab history
+      // here would erase those events from the panel. Keep the events already
+      // persisted by this service worker and let the panel replay them.
+      if (preserveRealtime) {
+        const current = await readEvents(tabId)
+        if (current.length) {
+          sendToTab(tabId, { type: 'devtools-history', events: current })
+          return
+        }
+      }
       await deleteTabEvents(tabId)
       nextSequences.set(tabId, 0)
 
@@ -173,16 +200,18 @@ function queueHistoryReplacement(tabId: number, payloads: unknown[]): void {
 
 chrome.runtime.onMessage.addListener((message, sender) => {
   if (
-    !message ||
-    typeof message !== 'object' ||
-    !('type' in message) ||
-    typeof sender.tab?.id !== 'number'
-  )
+    !message
+    || typeof message !== 'object'
+    || !('type' in message)
+    || typeof sender.tab?.id !== 'number'
+  ) {
     return
+  }
 
   if (message.type === 'devtools-init') {
-    if (!('payload' in message) || !Array.isArray(message.payload)) return
-    queueHistoryReplacement(sender.tab.id, message.payload)
+    if (!('payload' in message) || !Array.isArray(message.payload))
+      return
+    queueHistoryReplacement(sender.tab.id, message.payload, true)
     return
   }
 

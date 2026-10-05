@@ -8,7 +8,7 @@ Agent 接收上游 SSE 时使用 `connectAgentSse`。每条 `message` 会先转�
 import { connectAgentSse } from './index'
 
 const close = connectAgentSse('/api/agent/stream', {
-  onMessage: (event) => consumeAgentChunk(event.data),
+  onMessage: event => consumeAgentChunk(event.data),
 })
 
 // 会话结束时
