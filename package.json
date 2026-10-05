@@ -35,7 +35,6 @@
     "build": "vite build",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --cache --write .",
     "release": "bumpp",
     "prepublishOnly": "pnpm run build"
   },
@@ -45,17 +44,15 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@sxzz/eslint-config": "^8.6.0",
-    "@sxzz/prettier-config": "^2.3.2",
+    "@antfu/eslint-config": "^9.5.1",
     "@types/node": "^26.5.1",
     "@typescript/native-preview": "npm:typescript@~7.0.2",
     "bumpp": "^12.3.0",
     "eslint": "^10.10.0",
-    "prettier": "^3.9.6",
+    "eslint-factory": "^0.1.2",
     "tsdown": "^0.23.0",
     "tsdown-preset-sxzz": "^0.7.0",
     "typescript": "~6.0.3",
     "vitest": "^5.0.0"
-  },
-  "prettier": "@sxzz/prettier-config"
+  }
 }

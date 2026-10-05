@@ -5,6 +5,37 @@ export interface RoleMessage {
   readonly message: string
 }
 
+export interface TraceEvent {
+  readonly role: string
+  readonly message: string
+  readonly request: {
+    readonly model: string
+    readonly input: unknown[]
+  }
+  readonly payload: {
+    readonly id: string
+    readonly object: 'response'
+    readonly status: string
+    readonly model: string
+    readonly output: readonly Record<string, unknown>[]
+    readonly usage: Record<string, unknown>
+    readonly error: unknown
+  }
+  readonly trace: {
+    readonly session_id: string
+    readonly trace_id: string
+    readonly parent_id?: string
+    readonly tool_call_id?: string
+    readonly type: 'Trace' | 'Agent' | 'LLM' | 'Tool'
+    readonly name: string
+    readonly agent: string
+    readonly status: 'success' | 'running' | 'failed' | 'cancelled'
+    readonly model: string
+    readonly started_at?: number
+    readonly duration_ms: number
+  }
+}
+
 export interface SseTraceMessage extends RoleMessage {
   readonly source: 'sse'
   readonly eventId: string
@@ -22,7 +53,7 @@ export interface DevToolsInitMessage {
 }
 
 /** Send one trace record to the DevTools extension, if it is installed. */
-export function sendDevToolsEvent(data: RoleMessage): void {
+export function sendDevToolsEvent(data: RoleMessage | TraceEvent): void {
   persistEvent(data).catch(() => undefined)
   window.postMessage({ type: 'devtools-event', payload: data }, '*')
 }
