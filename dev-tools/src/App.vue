@@ -6,6 +6,7 @@ import Timeline from './components/Timeline.vue'
 import Toolbar from './components/Toolbar.vue'
 import TraceFooter from './components/TraceFooter.vue'
 import TraceTable from './components/TraceTable.vue'
+import { applyPanelMessage } from './panel-messages.js'
 import { useTraceStore } from './use-trace-store.js'
 
 const store = useTraceStore()
@@ -251,21 +252,28 @@ const contentStyle = computed(() => ({
 }))
 let port: chrome.runtime.Port | undefined
 let retry: ReturnType<typeof setTimeout> | undefined
+let disposed = false
 function onMessage(message: unknown): void {
-  if (!message || typeof message !== 'object' || !('type' in message))
-    return
-  const value = message as {
-    type: string
-    events?: StoredEvent[]
-    event?: StoredEvent
-  }
-  if (value.type === 'devtools-history')
-    store.replaceEvents(value.events ?? [])
-  if (value.type === 'devtools-event' && value.event)
-    store.addEvent(value.event)
+  applyPanelMessage(message, store.recording.value, store)
+}
+function refreshHistory(): void {
+  const tabId = chrome.devtools?.inspectedWindow?.tabId
+  if (typeof tabId === 'number')
+    port?.postMessage({ type: 'devtools-panel-ready', tabId })
+}
+function toggleRecording(): void {
+  store.recording.value = !store.recording.value
+  if (store.recording.value && port)
+    refreshHistory()
+}
+function clearEvents(): void {
+  if (port)
+    port.postMessage({ type: 'devtools-panel-clear' })
+  else
+    store.clear()
 }
 function connect(): void {
-  if (typeof chrome === 'undefined' || !chrome.runtime?.connect)
+  if (disposed || typeof chrome === 'undefined' || !chrome.runtime?.connect)
     return
   try {
     port = chrome.runtime.connect({ name: 'devtools-panel' })
@@ -274,21 +282,18 @@ function connect(): void {
     port.onDisconnect.addListener(() => {
       port = undefined
       store.connected.value = false
+      if (disposed)
+        return
       retry = setTimeout(() => {
         retry = undefined
         connect()
       }, 500)
     })
-    const tabId = chrome.devtools?.inspectedWindow?.tabId
-    if (typeof tabId !== 'number')
-      return
-    port.postMessage({
-      type: 'devtools-panel-ready',
-      tabId,
-    })
+    refreshHistory()
   }
   catch {
-    retry = setTimeout(connect, 500)
+    if (!disposed)
+      retry = setTimeout(connect, 500)
   }
 }
 function keyboard(event: KeyboardEvent): void {
@@ -314,6 +319,7 @@ onMounted(() => {
   document.addEventListener('keydown', keyboard)
 })
 onUnmounted(() => {
+  disposed = true
   document.removeEventListener('keydown', keyboard)
   if (retry)
     clearTimeout(retry)
@@ -334,8 +340,8 @@ onUnmounted(() => {
       :only-errors="store.onlyErrors.value"
       :total="store.events.value.length"
       :count="store.visibleRows.value.length"
-      @toggle-recording="store.recording.value = !store.recording.value"
-      @clear="store.clear"
+      @toggle-recording="toggleRecording"
+      @clear="clearEvents"
       @add="addDemoEvents"
       @toggle-filters="filtersVisible = !filtersVisible"
       @update:query="store.query.value = $event"

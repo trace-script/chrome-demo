@@ -15,4 +15,6 @@ web window.postMessage → content.js → background.js → IndexedDB
                                              └──────→ DevTools panel
 ```
 
-事件按 Tab 保存，Tab 关闭后清理。网页初始化时会发送 `devtools-init` 全量快照，清理按钮发送 `devtools-clear`，background 替换或清空该 Tab 的历史，面板也会整体替换当前列表；之后继续接收实时事件。面板连接后先发送当前 inspected tab，background 返回历史快照；历史和实时消息都带有唯一 `id` 与递增 `seq`，面板会去重并按顺序渲染。
+事件按 Tab 保存，Tab 关闭后清理。页面消息使用 `source: 'trace-script-extension'` 区分其他 `postMessage`；扩展接受所有站点和 frame 的事件，在详情中显示 Frame ID，但只有顶层 frame 能初始化或清空 Tab 历史。网页初始化时发送 `devtools-init` 快照，background 将它与已收到的实时事件按 `bridgeId` 去重合并。面板连接后按 Tab 顺序读取历史并接收实时事件；消息写入 IndexedDB 后才回复成功并推送面板。
+
+每个 Tab 最多保留 2000 条事件；初始化快照超过数量或 1 MiB 时，保留容量内最新的事件。普通事件单条消息最大 1 MiB，每秒最多接收 100 条，同时最多排队 32 条页面消息。面板的 Pause 暂停实时显示，恢复时重新读取历史；Clear 在暂停时也会清空可见列表和扩展保存的当前 Tab 历史。页面自己的 IndexedDB 独立于扩展，页面重新加载时仍可能重新发送它保存的事件。

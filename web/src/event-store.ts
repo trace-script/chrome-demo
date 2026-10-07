@@ -1,6 +1,7 @@
 import type { RoleMessage, TraceEvent } from './index.js'
 
 export interface StoredEvent extends RoleMessage {
+  readonly bridgeId?: string
   readonly source?: string
   readonly eventId?: string
   readonly createdAt: number

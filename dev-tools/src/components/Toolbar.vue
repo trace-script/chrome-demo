@@ -36,8 +36,8 @@ const isDev = import.meta.env.DEV
         type="button"
         class="icon-button min-h-0 min-w-0 p-0.5"
         :class="recording ? 'text-emerald-300' : 'text-red-300'"
-        :aria-label="recording ? 'Pause recording' : 'Resume recording'"
-        :title="recording ? 'Pause recording' : 'Resume recording'"
+        :aria-label="recording ? 'Pause live updates' : 'Resume live updates'"
+        :title="recording ? 'Pause live updates' : 'Resume live updates'"
         @click="emit('toggleRecording')"
       >
         <Icon

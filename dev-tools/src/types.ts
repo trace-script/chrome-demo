@@ -1,31 +1,32 @@
 export type Status = 'success' | 'running' | 'failed' | 'cancelled'
 export type DetailTab
   = 'Overview' | 'Usage' | 'Payload' | 'Timing' | 'Relations' | 'Raw'
-export interface StoredEvent {
-  readonly id: string
-  readonly tabId: number
-  readonly seq: number
-  readonly timestamp: number
-  readonly payload: unknown
-  readonly request?: unknown
-  readonly trace?: TraceMetadata
-}
-export interface TraceMetadata {
-  readonly session_id?: string
-  readonly trace_id?: string
-  readonly parent_id?: string
-  readonly tool_call_id?: string
-  readonly retry_count?: number
-  readonly type?: string
-  readonly name?: string
-  readonly agent?: string
-  readonly status?: Status | string
-  readonly model?: string
-  readonly started_at?: number
-  readonly ended_at?: number
-  readonly duration_ms?: number
-  readonly timing?: { queue_ms?: number, model_ms?: number, tool_ms?: number }
-}
+export type StoredEvent = Readonly<{
+  id: string
+  tabId: number
+  frameId?: number
+  seq: number
+  timestamp: number
+  payload: unknown
+  request?: unknown
+  trace?: TraceMetadata
+}>
+export type TraceMetadata = Readonly<Partial<{
+  session_id: string
+  trace_id: string
+  parent_id: string
+  tool_call_id: string
+  retry_count: number
+  type: string
+  name: string
+  agent: string
+  status: Status | string
+  model: string
+  started_at: number
+  ended_at: number
+  duration_ms: number
+  timing: { queue_ms?: number, model_ms?: number, tool_ms?: number }
+}>>
 export interface TraceRow {
   event: StoredEvent
   name: string
@@ -39,11 +40,11 @@ export interface TraceRow {
   parentId?: string
 }
 
-export interface TokenUsage {
-  input?: number
-  cachedInput?: number
-  cacheWrite?: number
-  output?: number
-  reasoning?: number
-  total?: number
-}
+export type TokenUsage = Partial<{
+  input: number
+  cachedInput: number
+  cacheWrite: number
+  output: number
+  reasoning: number
+  total: number
+}>

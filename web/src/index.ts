@@ -1,3 +1,4 @@
+import { limitDevToolsSnapshot } from '../../shared/devtools-snapshot.js'
 import { persistEvent } from './event-store.js'
 
 export interface RoleMessage {
@@ -54,16 +55,25 @@ export interface DevToolsInitMessage {
 
 /** Send one trace record to the DevTools extension, if it is installed. */
 export function sendDevToolsEvent(data: RoleMessage | TraceEvent): void {
-  persistEvent(data).catch(() => undefined)
-  window.postMessage({ type: 'devtools-event', payload: data }, '*')
+  const bridgeId = Array.from(
+    crypto.getRandomValues(new Uint32Array(4)),
+    value => value.toString(16).padStart(8, '0'),
+  ).join('')
+  const record = { ...data, bridgeId }
+  persistEvent(record).catch(() => undefined)
+  window.postMessage({ source: 'trace-script-extension', type: 'devtools-event', payload: record }, '*')
 }
 
 export function sendDevToolsInit(events: readonly RoleMessage[]): void {
-  window.postMessage({ type: 'devtools-init', payload: events }, '*')
+  window.postMessage({
+    source: 'trace-script-extension',
+    type: 'devtools-init',
+    payload: limitDevToolsSnapshot(events),
+  }, '*')
 }
 
 export function sendDevToolsClear(): void {
-  window.postMessage({ type: 'devtools-clear' }, '*')
+  window.postMessage({ source: 'trace-script-extension', type: 'devtools-clear' }, '*')
 }
 
 /** Forward an already parsed SSE message to DevTools. */

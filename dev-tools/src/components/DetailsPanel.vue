@@ -47,7 +47,7 @@ const retryEvents = computed(() => props.siblings.filter(item => props.row && tr
     <div class="details-content min-h-0 flex-1 overflow-auto p-2.5">
       <template v-if="active === 'Overview'">
         <dl class="details-fields mb-5 grid grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-0">
-          <template v-for="entry in [['Name', row.name], ['Type', row.type], ['Status', row.status], ['Agent', row.agent], ['Model', row.model], ['Tokens', value(row.tokens)], ['Duration', duration(row.duration)], ['Started', formatTimestamp(trace.started_at)], ['Ended', formatTimestamp(trace.ended_at)], ['Event ID', row.event.id], ['Session ID', trace.session_id], ['Trace ID', trace.trace_id], ['Parent ID', trace.parent_id]]" :key="entry[0]">
+          <template v-for="entry in [['Name', row.name], ['Type', row.type], ['Status', row.status], ['Agent', row.agent], ['Model', row.model], ['Frame ID', row.event.frameId ?? 0], ['Tokens', value(row.tokens)], ['Duration', duration(row.duration)], ['Started', formatTimestamp(trace.started_at)], ['Ended', formatTimestamp(trace.ended_at)], ['Event ID', row.event.id], ['Session ID', trace.session_id], ['Trace ID', trace.trace_id], ['Parent ID', trace.parent_id]]" :key="entry[0]">
             <dt class="details-field-label border-b border-(--divider) py-2.5 text-slate-500">
               {{ entry[0] }}
             </dt><dd class="details-field-value text-xs m-0 min-w-0 wrap-break-word border-b border-(--divider) py-2.5">
